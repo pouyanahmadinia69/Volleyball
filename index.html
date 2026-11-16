@@ -50,7 +50,8 @@ button.x{background:none;border:0;color:var(--bad);font-size:16px;padding:4px 8p
 .sp{display:inline-flex;flex-direction:column;align-items:center}.sp .x{padding:2px 8px;line-height:1;color:var(--pri)}.sp b{font-size:18px}
 .tm{display:flex;align-items:center;gap:4px}
 .fl{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0}.fl label{color:var(--mut);font-size:14px;min-width:60px}.fl select,.fl input{flex:1;min-width:0}.fl input.sn{width:60px;flex:none;text-align:center}
-th+th,td+td{border-inline-start:1px solid #d3e3ea}
+th,td{border-left:1px solid #d3e3ea}
+th:last-child,td:last-child{border-left:0}
 .dd:disabled{opacity:.22;text-decoration:line-through}
 td{padding:8px 8px}th{padding:10px 8px}
 body{padding-left:max(0px,env(safe-area-inset-left));padding-right:max(0px,env(safe-area-inset-right))}
@@ -138,7 +139,9 @@ const tOnly=l=>(String(l||'').match(/\d{1,2}:\d{2}-\d{1,2}:\d{2}/)||[l||''])[0];
 const slotDays=()=>new Set(S.slots.filter(s=>s.day).map(s=>s.day));
 const firstAllowed=d=>{const D=slotDays();if(!D.size||!parse(d))return d;let x=d;for(let i=0;i<14;i++){if(D.has(dayName(x)))return x;x=nextDay(x)}return d};
 const slotsFor=date=>{const dn=dayName(date);return S.slots.filter(s=>!dn||!s.day||s.day===dn).map(slotLabel)};
-const sOpts=(cur,date)=>{const ls=slotsFor(date),dn=dayName(date);return'<option value="">—</option>'+[...ls,...(cur&&!ls.includes(cur)?[cur]:[])].map(l=>`<option value="${esc(l)}"${l===cur?' selected':''}>${esc(dn&&ls.includes(l)?tOnly(l):l)}</option>`).join('')};
+const sOpts=(cur,date)=>{const dn=dayName(date),all=S.slots.map(slotLabel),same=dn?S.slots.filter(s=>!s.day||s.day===dn).map(slotLabel):all,other=all.filter(l=>!same.includes(l)),extra=cur&&!all.includes(cur)?[cur]:[];
+ const o=(l,x)=>`<option value="${esc(l)}"${l===cur?' selected':''}>${esc(x)}</option>`;
+ return'<option value="">—</option>'+same.map(l=>o(l,dn?tOnly(l):l)).join('')+extra.map(l=>o(l,l)).join('')+(other.length?`<optgroup label="سانس‌های روزهای دیگر (تاریخ خودکار عوض می‌شود)">${other.map(l=>o(l,l)).join('')}</optgroup>`:'')};
 function fixSlot(o){const dn=dayName(o.date);if(!dn)return;const ok=slotsFor(o.date);if(!ok.includes(o.slot)){o.slot=ok[0]||'';if('min' in o&&o.slot)o.min=slotMin(o.slot)||o.min}}
 const fd=d=>d?`${dayName(d)} ${d}`:'';
 const bar=(k,o={})=>`<div class="r">${o.noImp?'':`<button class="b" data-imp="${k}">ورود از اکسل</button>`}<button class="b" data-exp="${k}">خروج اکسل</button>${o.noImp?'':`<button class="b o" data-tpl="${k}">دریافت قالب</button>`}</div>`;
@@ -160,11 +163,11 @@ function render(){
  const sum=S.teams.map(t=>{const ps=S.practices.filter(p=>p.teams.includes(t.id)),n=ps.length;
   return`<tr><td class="t">${esc(t.name)}</td><td>${esc(t.level)}</td><td>${ps.map(p=>`<div>${fd(p.date)}</div>`).join('')}</td><td>${n}</td><td class="${n===S.need?'ok':'no'}">${n===S.need?'✓ تأیید':n<S.need?'ناقص ('+(S.need-n)+' کم)':'اضافه ('+(n-S.need)+' بیشتر)'}</td></tr>`}).join('');
  $('pr').innerHTML=bar('p')+`<h3>برنامه تمرینات</h3><div class="wrap"><table class="w2">${head(['جلسه','تاریخ','روز','تیم‌های حاضر','تعداد','ساعت','دقیقه','نوع جلسه',''])}<tbody>${prow||'<tr><td colspan="9">جلسه‌ای ثبت نشده</td></tr>'}</tbody></table></div><button class="b" data-add="p">+ جلسه جدید</button><h3>خلاصه هر تیم (هر تیم ${S.need} نوبت)</h3><div class="wrap"><table class="w2">${head(['تیم','سطح','تاریخ‌های تمرین','تعداد جلسات','کنترل'])}<tbody>${sum||'<tr><td colspan="5">تیمی نیست</td></tr>'}</tbody></table></div>`;
- $('tm').innerHTML=bar('t')+`<div class="card"><div class="r"><input id="nt" placeholder="اسم تیم جدید" style="flex:1"><button class="b" data-add="t">افزودن</button></div>${S.teams.map(t=>`<div class="li"><span><b>${esc(t.name)}</b> <span class="mut">${esc(t.level)}</span></span><span>${acts('t',t.id)}</span></div>`).join('')||'<div class="mut">تیمی اضافه نشده</div>'}</div>`;
- $('se').innerHTML=`<div class="card"><h3 style="margin-top:0">سانس‌ها (ساعت شروع و پایان)</h3>${S.slots.map(s=>`<div class="li" style="flex-wrap:wrap;gap:8px"><select data-sd="${s.id}" style="min-width:110px">${optsOf(['',...WD],s.day)}</select><div dir="ltr" class="tm">${stp(s.id,'sh',s.sh)}<b>:</b>${stp(s.id,'sm',s.sm)}<span class="mut">&nbsp;to&nbsp;</span>${stp(s.id,'eh',s.eh)}<b>:</b>${stp(s.id,'em',s.em)}</div><button class="x" data-del="s:${s.id}">✕</button></div>`).join('')||'<div class="mut">سانسی تعریف نشده</div>'}<button class="b" data-add="s">+ سانس جدید</button><p class="mut">برای هر سانس روز هفته و ساعت را مشخص کنید؛ ساخت خودکار برنامه بازی‌ها فقط از سانس‌هایی که روز دارند استفاده می‌کند. در جدول‌ها، سانس از همین لیست انتخاب می‌شود. دقیقه‌ها با گام 5 تغییر می‌کنند.</p></div><div class="card"><h3 style="margin-top:0">تعداد جلسات تمرین هر تیم</h3><input type="number" inputmode="numeric" value="${S.need}" data-f="x:0:need" style="width:90px"></div><div class="card"><h3 style="margin-top:0">پشتیبان‌گیری (JSON)</h3><div class="r"><button class="b" data-bk="exp">دریافت نسخه پشتیبان</button><button class="b o" data-bk="imp">بازیابی</button></div><p class="mut">اسم فایل شامل تاریخ شمسی امروز است. بعد از زدن دکمه، از منوی گوشی «Save to Files» را بزنید.</p></div><div class="card"><button class="x" data-bk="reset" style="border:1px solid var(--bad);border-radius:8px">پاک کردن همه اطلاعات</button></div>`;
+ $('tm').innerHTML=bar('t')+`<div class="card"><div class="r"><button class="b" data-add="t">+ تیم جدید</button></div>${S.teams.map(t=>`<div class="li"><span><b>${esc(t.name)}</b> <span class="mut">${esc(t.level)}</span></span><span>${acts('t',t.id)}</span></div>`).join('')||'<div class="mut">تیمی اضافه نشده</div>'}</div>`;
+ $('se').innerHTML=`<div class="card"><h3 style="margin-top:0">سانس‌ها (ساعت شروع و پایان)</h3>${(SDR||S.slots).map(s=>`<div class="li" style="flex-wrap:wrap;gap:8px"><select data-sd="${s.id}" style="min-width:110px">${optsOf(['',...WD],s.day)}</select><div dir="ltr" class="tm">${stp(s.id,'sh',s.sh)}<b>:</b>${stp(s.id,'sm',s.sm)}<span class="mut">&nbsp;to&nbsp;</span>${stp(s.id,'eh',s.eh)}<b>:</b>${stp(s.id,'em',s.em)}</div><button class="x" data-del="s:${s.id}">✕</button></div>`).join('')||'<div class="mut">سانسی تعریف نشده</div>'}<div class="r"><button class="b o" data-add="s">+ سانس جدید</button></div>${SDR?'<div class="r"><button class="b" data-sok="1">تأیید</button><button class="b o" data-scancel="1">لغو</button><span class="mut">تغییرات سانس‌ها هنوز اعمال نشده</span></div>':''}<p class="mut">برای هر سانس روز هفته و ساعت را مشخص کنید؛ ساخت خودکار برنامه بازی‌ها فقط از سانس‌هایی که روز دارند استفاده می‌کند. در جدول‌ها، سانس از همین لیست انتخاب می‌شود. دقیقه‌ها با گام 5 تغییر می‌کنند.</p></div><div class="card"><h3 style="margin-top:0">تعداد جلسات تمرین هر تیم</h3><input type="number" inputmode="numeric" value="${S.need}" data-f="x:0:need" style="width:90px"></div><div class="card"><h3 style="margin-top:0">پشتیبان‌گیری (JSON)</h3><div class="r"><button class="b" data-bk="exp">دریافت نسخه پشتیبان</button><button class="b o" data-bk="imp">بازیابی</button></div><p class="mut">اسم فایل شامل تاریخ شمسی امروز است. بعد از زدن دکمه، از منوی گوشی «Save to Files» را بزنید.</p></div><div class="card"><button class="x" data-bk="reset" style="border:1px solid var(--bad);border-radius:8px">پاک کردن همه اطلاعات</button></div>`;
  document.querySelectorAll('.wrap').forEach((w,i)=>w.scrollLeft=sc[i]||0);scrollTo(0,y)}
 /* ---- modal / pickers ---- */
-let mh=null,back=null;
+let mh=null,back=null,DR=null,SDR=null;
 const M=h=>{$('modal').innerHTML=h;$('modal').style.display='flex'};
 const closeM=()=>{$('modal').style.display='none';$('modal').innerHTML='';mh=null;const b=back;back=null;render();if(b)b()};
 function confirmDel(txt,fn){back=null;M(`<div class="cal"><b>${txt}</b><div class="r" style="margin-top:14px"><button class="b" style="background:var(--bad)" data-yes="1">بله، حذف شود</button><button class="b o" data-mclose="1">انصراف</button></div></div>`);
@@ -178,24 +181,47 @@ function pick(cur,cb,after){back=after||null;const sel=parse(cur);let[y,m]=sel||
   else if(d.d){cb(fmt(y,m,+d.d));closeM()}
   else if(d.tod){cb(fmt(...today()));closeM()}
   else if(d.clr){cb('');closeM()}};draw()}
-function pickTeams(id,after){back=after||null;const p=S.practices.find(x=>x.id===id);
+function pickTeams(p,after){back=after||null;
  M(`<div class="cal"><b>تیم‌های حاضر</b>${S.teams.map(t=>`<label class="li"><span>${esc(t.name)}</span><input type="checkbox" data-ck="${t.id}"${p.teams.includes(t.id)?' checked':''}></label>`).join('')}<div class="r" style="margin-top:10px"><button class="b" data-mclose="1">تأیید</button></div></div>`);
- mh=e=>{const c=e.target.dataset&&e.target.dataset.ck;if(!c)return;p.teams=p.teams.filter(x=>x!==c);if(e.target.checked)p.teams.push(c);save()}}
-function openEdit(k,id){back=null;const fl=(l,h)=>`<div class="fl"><label>${l}</label>${h}</div>`;let h='';
- const dbtn=(k,id,d)=>`<button class="d" data-pd="${k}:${id}">${d?fd(d):'انتخاب تاریخ'}</button>`;
- if(k==='m'){const g=S.matches.find(x=>x.id===id);if(!g)return;
-  const si=j=>fl('ست '+(j+1),`<span dir="ltr"><input class="sn" type="number" inputmode="numeric" value="${esc(g.s[j][0])}" data-f="m:${id}:s:${j}:0"> - <input class="sn" type="number" inputmode="numeric" value="${esc(g.s[j][1])}" data-f="m:${id}:s:${j}:1"></span>`);
-  h=`<b>ویرایش بازی ${S.matches.indexOf(g)+1}</b>`+fl('تاریخ',dbtn('m',id,g.date))+fl('ترتیب',`<select data-f="m:${id}:order">${optsOf(['','اول','دوم'],g.order)}</select>`)+fl('سانس',`<select data-f="m:${id}:slot">${sOpts(g.slot,g.date)}</select>`)+fl('تیم اول',`<select data-f="m:${id}:a">${tOpts(g.a)}</select>`)+fl('تیم دوم',`<select data-f="m:${id}:b">${tOpts(g.b)}</select>`)+si(0)+si(1)+si(2)+`<div class=\"r\" style=\"margin-top:8px\"><button class=\"b o\" data-pp=\"${id}\">تعویق به سانس بعدی</button><button class=\"b o\" data-ub=\"${id}\"${S.pp.some(x=>x.id===id)?'':' disabled'}>برگشت به جای خود</button></div><p class=\"mut\" style=\"padding:4px\">تعویق: این بازی به اولین بازی سانس بعدی می‌رود و بازی‌های بعدی یک جایگاه عقب می‌روند.</p>`}
- if(k==='p'){const p=S.practices.find(x=>x.id===id);if(!p)return;
-  h=`<b>ویرایش جلسه ${S.practices.indexOf(p)+1}</b>`+fl('تاریخ',dbtn('p',id,p.date))+fl('تیم‌ها',`<button class="d" data-pt="${id}">${p.teams.length?esc(p.teams.map(nm).join(' / ')):'انتخاب تیم‌ها'}</button>`)+fl('سانس',`<select data-f="p:${id}:slot">${sOpts(p.slot,p.date)}</select>`)+fl('دقیقه',`<input type="number" inputmode="numeric" value="${esc(p.min)}" data-f="p:${id}:min">`)+fl('نوع جلسه',`<input value="${esc(p.type)}" data-f="p:${id}:type" placeholder="مثلاً حرفه‌ای">`)}
- if(k==='t'){const t=S.teams.find(x=>x.id===id);if(!t)return;
-  h=`<b>ویرایش تیم</b>`+fl('اسم',`<input value="${esc(t.name)}" data-f="t:${id}:name">`)+fl('سطح',`<select data-f="t:${id}:level">${optsOf(['','حرفه‌ای','آماتور'],t.level)}</select>`)}
- M(`<div class="cal">${h}<div class="r" style="margin-top:12px"><button class="b" data-mclose="1">تأیید</button></div></div>`);
+ mh=e=>{const c=e.target.dataset&&e.target.dataset.ck;if(!c)return;p.teams=p.teams.filter(x=>x!==c);if(e.target.checked)p.teams.push(c)}}
+function startEdit(k,id){const src=(k==='m'?S.matches:k==='p'?S.practices:S.teams).find(x=>x.id===id);if(!src)return;DR={k,isNew:false,o:JSON.parse(JSON.stringify(src))};showEdit()}
+function startNew(k){let o;
+ if(k==='m'){const l=S.matches[S.matches.length-1];o={id:uid(),date:l?l.date:firstAllowed(fmt(...today())),order:'',slot:l?l.slot:'',a:'',b:'',s:[['',''],['',''],['','']]};fixSlot(o)}
+ if(k==='p'){const l=S.practices[S.practices.length-1];o={id:uid(),date:l?l.date:firstAllowed(fmt(...today())),teams:[],slot:l?l.slot:'',min:90,type:''};fixSlot(o)}
+ if(k==='t')o={id:uid(),name:'',level:''};
+ DR={k,isNew:true,o};showEdit()}
+function setFd(el){const f=el.dataset.fd;if(!f||!DR)return'';const[fld,i,j]=f.split(':'),o=DR.o;
+ if(fld==='s')o.s[+i][+j]=el.value;else if(fld==='min')o.min=+el.value||0;else o[fld]=el.value;return fld}
+const syncDraft=()=>document.querySelectorAll('#modal [data-fd]').forEach(setFd);
+$('modal').addEventListener('change',e=>{const f=setFd(e.target);if(f!=='slot'||!DR||DR.k==='t')return;
+ const s=S.slots.find(x=>slotLabel(x)===DR.o.slot);
+ if(s&&s.day&&s.day!==dayName(DR.o.date)){let d=DR.o.date||fmt(...today());for(let i=0;i<8&&dayName(d)!==s.day;i++)d=nextDay(d);DR.o.date=d}
+ if(DR.k==='p'){const mm=slotMin(DR.o.slot);if(mm)DR.o.min=mm}
+ showEdit()});
+function commitEdit(){syncDraft();const{k,o,isNew}=DR;
+ if(k==='t'){o.name=String(o.name).trim();if(!o.name){toast('اسم تیم را وارد کنید');return}}
+ const L=k==='m'?S.matches:k==='p'?S.practices:S.teams,i=L.findIndex(x=>x.id===o.id);
+ if(i>=0)L[i]=o;else L.push(o);
+ if(k==='p')S.practices.sort(dcmp);
+ save();DR=null;closeM()}
+function showEdit(){back=null;const{k,o,isNew}=DR,fl=(l,h)=>`<div class="fl"><label>${l}</label>${h}</div>`;let h='';
+ const dbtn=d=>`<button class="d" data-pd="1">${d?fd(d):'انتخاب تاریخ'}</button>`;
+ if(k==='m'){
+  const si=j=>fl('ست '+(j+1),`<span dir="ltr"><input class="sn" type="number" inputmode="numeric" value="${esc(o.s[j][0])}" data-fd="s:${j}:0"> - <input class="sn" type="number" inputmode="numeric" value="${esc(o.s[j][1])}" data-fd="s:${j}:1"></span>`);
+  h=`<b>${isNew?'بازی جدید':'ویرایش بازی '+(S.matches.findIndex(x=>x.id===o.id)+1)}</b>`+fl('تاریخ',dbtn(o.date))+fl('ترتیب',`<select data-fd="order">${optsOf(['','اول','دوم'],o.order)}</select>`)+fl('سانس',`<select data-fd="slot">${sOpts(o.slot,o.date)}</select>`)+fl('تیم اول',`<select data-fd="a">${tOpts(o.a)}</select>`)+fl('تیم دوم',`<select data-fd="b">${tOpts(o.b)}</select>`)+si(0)+si(1)+si(2)
+   +(isNew?'':`<div class="r" style="margin-top:8px"><button class="b o" data-pp="1">تعویق به سانس بعدی</button><button class="b o" data-ub="1"${S.pp.some(x=>x.id===o.id)?'':' disabled'}>برگشت به جای خود</button></div><p class="mut" style="padding:4px">تعویق: این بازی به اولین بازی سانس بعدی می‌رود و بازی‌های بعدی یک جایگاه عقب می‌روند (فوراً اعمال می‌شود).</p>`)}
+ if(k==='p'){
+  h=`<b>${isNew?'جلسه جدید':'ویرایش جلسه '+(S.practices.findIndex(x=>x.id===o.id)+1)}</b>`+fl('تاریخ',dbtn(o.date))+fl('تیم‌ها',`<button class="d" data-pt="1">${o.teams.length?esc(o.teams.map(nm).join(' / ')):'انتخاب تیم‌ها'}</button>`)+fl('سانس',`<select data-fd="slot">${sOpts(o.slot,o.date)}</select>`)+fl('دقیقه',`<input type="number" inputmode="numeric" value="${esc(o.min)}" data-fd="min">`)+fl('نوع جلسه',`<input value="${esc(o.type)}" data-fd="type" placeholder="مثلاً حرفه‌ای">`)}
+ if(k==='t'){
+  h=`<b>${isNew?'تیم جدید':'ویرایش تیم'}</b>`+fl('اسم',`<input value="${esc(o.name)}" data-fd="name" placeholder="اسم تیم">`)+fl('سطح',`<select data-fd="level">${optsOf(['','حرفه‌ای','آماتور'],o.level)}</select>`)}
+ M(`<div class="cal">${h}<div class="r" style="margin-top:12px"><button class="b" data-ok="1">تأیید</button><button class="b o" data-cancel="1">لغو</button></div></div>`);
  mh=e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;
-  if(d.pd){const[kk,ii]=d.pd.split(':'),o=(kk==='m'?S.matches:S.practices).find(x=>x.id===ii);pick(o.date,v=>{o.date=v;fixSlot(o);if(kk==='p')S.practices.sort(dcmp);save()},()=>openEdit(kk,ii))}
-  if(d.pt)pickTeams(d.pt,()=>openEdit('p',d.pt));
-  if(d.pp){postpone(d.pp);render();openEdit('m',d.pp)}
-  if(d.ub){undoPP(d.ub);render();openEdit('m',d.ub)}}}
+  if(d.ok){commitEdit();return}
+  if(d.cancel){DR=null;closeM();return}
+  if(d.pd){syncDraft();pick(DR.o.date,v=>{DR.o.date=v;fixSlot(DR.o)},()=>showEdit())}
+  if(d.pt){syncDraft();pickTeams(DR.o,()=>showEdit())}
+  if(d.pp){const id=DR.o.id;postpone(id);render();startEdit('m',id)}
+  if(d.ub){const id=DR.o.id;undoPP(id);render();startEdit('m',id)}}}
 /* ---- auto schedule ---- */
 function genSchedule(start,per,replace){
  const slots=S.slots.filter(s=>s.day).sort((a,b)=>WD.indexOf(a.day)-WD.indexOf(b.day)||(a.sh*60+a.sm)-(b.sh*60+b.sm));
@@ -230,7 +256,7 @@ function openGen(){back=null;
   <div class="fl"><label>بازی در هر سانس</label><select id="gp">${[1,2,3,4].map(n=>`<option${n===per?' selected':''}>${n}</option>`).join('')}</select></div>
   ${S.matches.length?`<label class="fl"><span>پاک شدن برنامه فعلی (با نتایج) و ساخت مجدد</span><input type="checkbox" id="gr"${rep?' checked':''} style="flex:none"></label><p class="mut">اگر تیک نزنید، فقط بازی‌هایی که هنوز در برنامه نیستند اضافه می‌شوند.</p>`:''}
   <p class="mut">هر تیم با همه‌ی تیم‌ها یک بار بازی می‌کند و دو بازی هم‌سانس تیم مشترک ندارند. فقط از سانس‌هایی استفاده می‌شود که روز هفته دارند.</p>
-  <div class="r"><button class="b" data-go="1">ساخت برنامه</button><button class="b o" data-mclose="1">بستن</button></div></div>`);
+  <div class="r"><button class="b" data-go="1">ساخت برنامه</button><button class="b o" data-mclose="1">لغو</button></div></div>`);
  mh=e=>{const t=e.target.closest('button');if(!t)return;
   per=+$('gp').value;if($('gr'))rep=$('gr').checked;
   if(t.dataset.gd)pick(start,v=>{if(v)start=v},()=>draw());
@@ -272,11 +298,13 @@ function sheets(k){
  if(k==='p')return[{n:'تمرینات',h:[...COL.p,'روز'],r:S.practices.map(p=>[p.date,p.teams.map(nm).join(' / '),p.slot,p.min,p.type,dayName(p.date)])},
   {n:'خلاصه تیم‌ها',h:['تیم','سطح','تاریخ‌های تمرین','تعداد جلسات','کنترل'],r:S.teams.map(t=>{const ps=S.practices.filter(p=>p.teams.includes(t.id));return[t.name,t.level,ps.map(p=>fd(p.date)).join('، '),ps.length,ps.length===S.need?'تأیید':'بررسی']})}];
  if(k==='s')return[{n:'رده‌بندی',h:['رتبه','تیم','بازی','برد','باخت','ست +','ست −','معدل ست','پوئن +','پوئن −','معدل پوئن'],r:stats().map((t,i)=>[i+1,t.name,t.p,t.w,t.l,t.sw,t.sl,+t.sr.toFixed(3),t.pw,t.pl,+t.pr.toFixed(3)])}]}
-const TPL={t:[['STORM','حرفه‌ای']],m:[['1405/08/23','اول','19:30-21:00','NWG','STORM',25,22,10,25,16,14]],p:[['1405/08/02','STORM / topgun','19:30-21:00',90,'حرفه‌ای']]};
+const exSlot=()=>S.slots[0]?slotLabel(S.slots[0]):'19:30-21:00';
+const TPL={t:()=>[['STORM','حرفه‌ای']],m:()=>[['1405/08/23','اول',exSlot(),'NWG','STORM',25,22,10,25,16,14]],p:()=>[['1405/08/02','STORM / topgun',exSlot(),90,'حرفه‌ای']]};
 function xl(list,fn){if(typeof XLSX==='undefined'){toast('کتابخانه اکسل بارگذاری نشده؛ یک بار با اینترنت باز کنید');return}
  const wb=XLSX.utils.book_new();wb.Workbook={Views:[{RTL:true}]};
  list.forEach(s=>{const ws=XLSX.utils.aoa_to_sheet([s.h,...s.r]);ws['!cols']=s.h.map(()=>({wch:20}));XLSX.utils.book_append_sheet(wb,ws,s.n)});
  saveFile(new File([XLSX.write(wb,{bookType:'xlsx',type:'array'})],fn,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}))}
+const mapSlot=(l,date)=>{if(!l)return'';const ls=S.slots.map(slotLabel);if(ls.includes(l))return l;const dn=dayName(date),c=S.slots.filter(s=>(!dn||!s.day||s.day===dn)&&tOnly(slotLabel(s))===tOnly(l))[0];return c?slotLabel(c):l};
 const tid=n=>{n=String(n).trim();if(!n)return'';let t=S.teams.find(x=>x.name.toLowerCase()===n.toLowerCase());if(!t){t={id:uid(),name:n,level:''};S.teams.push(t)}return t.id};
 function importX(k,file){if(typeof XLSX==='undefined'){toast('کتابخانه اکسل بارگذاری نشده؛ یک بار با اینترنت باز کنید');return}
  const fr=new FileReader();fr.onload=()=>{try{
@@ -285,26 +313,29 @@ function importX(k,file){if(typeof XLSX==='undefined'){toast('کتابخانه �
   if(ix.some(i=>i<0))throw 0;
   const data=rows.slice(1).filter(r=>r.some(c=>String(c).trim()!=='')),g=(r,i)=>String(r[ix[i]]??'').trim();
   if(k==='t')data.forEach(r=>{const id=tid(g(r,0));if(id)S.teams.find(t=>t.id===id).level=g(r,1)});
-  if(k==='m')S.matches=data.map(r=>({id:uid(),date:normDate(g(r,0)),order:g(r,1),slot:g(r,2),a:tid(g(r,3)),b:tid(g(r,4)),s:[[5,6],[7,8],[9,10]].map(([a,b])=>[en(g(r,a)),en(g(r,b))])}));
-  if(k==='p')S.practices=data.map(r=>({id:uid(),date:normDate(g(r,0)),teams:g(r,1).split(/\s*[\/،,؛;]\s*/).map(tid).filter(Boolean),slot:g(r,2),min:+en(g(r,3))||90,type:g(r,4)})).sort(dcmp);
+  if(k==='m'){S.pp=[];S.matches=data.map(r=>({id:uid(),date:normDate(g(r,0)),order:g(r,1),slot:mapSlot(g(r,2),normDate(g(r,0))),a:tid(g(r,3)),b:tid(g(r,4)),s:[[5,6],[7,8],[9,10]].map(([a,b])=>[en(g(r,a)),en(g(r,b))])}))}
+  if(k==='p')S.practices=data.map(r=>({id:uid(),date:normDate(g(r,0)),teams:g(r,1).split(/\s*[\/،,؛;]\s*/).map(tid).filter(Boolean),slot:mapSlot(g(r,2),normDate(g(r,0))),min:+en(g(r,3))||90,type:g(r,4)})).sort(dcmp);
   save();render();toast('ورود اطلاعات انجام شد ('+data.length+' ردیف)')}catch(e){toast('فایل با قالب جور نیست؛ «دریافت قالب» را بزنید')}};
  fr.readAsArrayBuffer(file)}
+function commitSlots(){const old=new Map(S.slots.map(s=>[s.id,slotLabel(s)])),map=new Map();
+ SDR.forEach(s=>{const o=old.get(s.id),n=slotLabel(s);if(o!==undefined&&o!==n)map.set(o,n)});
+ S.matches.forEach(g=>{if(map.has(g.slot))g.slot=map.get(g.slot)});S.practices.forEach(p=>{if(map.has(p.slot))p.slot=map.get(p.slot)});
+ S.slots=SDR;SDR=null;save();render();toast('سانس‌ها ذخیره شد')}
 /* ---- events ---- */
 let impK='';
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,section').forEach(e=>e.classList.remove('on'));b.classList.add('on');$(b.dataset.t).classList.add('on')});
 document.addEventListener('click',e=>{
- const mo=$('modal');if(mo.contains(e.target)){if(e.target===mo||e.target.closest('[data-mclose]')){closeM();return}if(mh)mh(e);return}
+ const mo=$('modal');if(mo.contains(e.target)){if(e.target.closest('[data-mclose]')){closeM();return}if(e.target===mo)return;if(mh)mh(e);return}
  const t=e.target.closest('button');if(!t)return;const d=t.dataset;
- if(d.ed){const[k,id]=d.ed.split(':');openEdit(k,id)}
+ if(d.ed){const[k,id]=d.ed.split(':');startEdit(k,id)}
  if(d.gen)openGen();
- if(d.add==='t'){const v=$('nt').value.trim();if(v){S.teams.push({id:uid(),name:v,level:''});save();render()}}
- if(d.add==='m'){const l=S.matches[S.matches.length-1];S.matches.push({id:uid(),date:l?l.date:firstAllowed(fmt(...today())),order:'',slot:l?l.slot:'',a:'',b:'',s:[['',''],['',''],['','']]});fixSlot(S.matches[S.matches.length-1]);save();render();openEdit('m',S.matches[S.matches.length-1].id)}
- if(d.add==='p'){const l=S.practices[S.practices.length-1],sl=S.slots[0]?slotLabel(S.slots[0]):'';S.practices.push({id:uid(),date:l?l.date:firstAllowed(fmt(...today())),teams:[],slot:l?l.slot:sl,min:slotMin(l?l.slot:sl)||90,type:''});fixSlot(S.practices[S.practices.length-1]);save();render();openEdit('p',S.practices[S.practices.length-1].id)}
- if(d.add==='s'){S.slots.push({id:uid(),sh:18,sm:0,eh:19,em:30});save();render()}
- if(d.st){const[id,f,dl]=d.st.split(':'),s=S.slots.find(x=>x.id===id),old=slotLabel(s),mx=f[1]==='h'?24:60,step=f[1]==='h'?1:5;
-  s[f]=((s[f]+ +dl*step)%mx+mx)%mx;const nw=slotLabel(s);
-  S.matches.forEach(g=>{if(g.slot===old)g.slot=nw});S.practices.forEach(p=>{if(p.slot===old)p.slot=nw});save();render()}
- if(d.del){const[k,id]=d.del.split(':');
+ if(d.add==='t'||d.add==='m'||d.add==='p')startNew(d.add);
+ const stage=()=>(SDR||(SDR=S.slots.map(s=>({...s}))));
+ if(d.add==='s'){stage().push({id:uid(),day:'',sh:18,sm:0,eh:19,em:30});render()}
+ if(d.st){const[id,f,dl]=d.st.split(':'),s=stage().find(x=>x.id===id),mx=f[1]==='h'?24:60,step=f[1]==='h'?1:5;s[f]=((s[f]+ +dl*step)%mx+mx)%mx;render()}
+ if(d.scancel){SDR=null;render()}
+ if(d.sok)commitSlots();
+ if(d.del){const[k,id]=d.del.split(':');if(k==='s'){SDR=stage().filter(x=>x.id!==id);render();return}
   const msg={m:'این بازی حذف شود؟',p:'این جلسه تمرین حذف شود؟',t:'تیم و همه بازی‌ها و تمرین‌هایش حذف شود؟',s:'این سانس حذف شود؟'}[k];
   confirmDel(msg,()=>{
    if(k==='m')S.matches=S.matches.filter(x=>x.id!==id);
@@ -314,19 +345,13 @@ document.addEventListener('click',e=>{
  if(d.bk==='reset')confirmDel('همه اطلاعات (تیم‌ها، بازی‌ها، تمرینات) پاک شود؟',()=>{S=norm({})});
  if(d.imp){impK=d.imp;$('xf').click()}
  if(d.exp)xl(sheets(d.exp),`volley-${FN[d.exp]}-${ds()}.xlsx`);
- if(d.tpl)xl([{n:'قالب',h:COL[d.tpl],r:TPL[d.tpl]}],`volley-${FN[d.tpl]}-template.xlsx`);
+ if(d.tpl)xl([{n:'قالب',h:COL[d.tpl],r:TPL[d.tpl]()}],`volley-${FN[d.tpl]}-template.xlsx`);
  if(d.bk==='exp')saveFile(new File([JSON.stringify(S)],`volley-backup-${ds()}.json`,{type:'application/json'}));
  if(d.bk==='imp')$('jf').click()});
 document.addEventListener('change',e=>{const t=e.target,f=t.dataset.f;
- if(t.dataset.sd){const s=S.slots.find(x=>x.id===t.dataset.sd),old=slotLabel(s);s.day=t.value;const nw=slotLabel(s);
-  S.matches.forEach(g=>{if(g.slot===old)g.slot=nw});S.practices.forEach(p=>{if(p.slot===old)p.slot=nw});save();render();return}
- if(!f)return;const[k,id,fl,i,j]=f.split(':');let reopen=false;
- if(k==='x'){S.need=Math.max(1,+t.value||4)}
- else{const o=(k==='m'?S.matches:k==='p'?S.practices:S.teams).find(x=>x.id===id);if(!o)return;
-  if(fl==='s')o.s[+i][+j]=t.value;else if(fl==='min')o.min=+t.value||0;else if(fl==='name'){if(t.value.trim())o.name=t.value.trim()}
-  else{o[fl]=t.value;if(k==='p'&&fl==='slot'){const mm=slotMin(t.value);if(mm){o.min=mm;reopen=true}}}
-  if(reopen){save();render();openEdit('p',id);return}}
- save();render()});
+ if(t.dataset.sd){if(!SDR)SDR=S.slots.map(s=>({...s}));SDR.find(x=>x.id===t.dataset.sd).day=t.value;render();return}
+ if(!f)return;const[k]=f.split(':');
+ if(k==='x'){S.need=Math.max(1,+t.value||4);save();render()}});
 $('xf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)importX(impK,f)};
 $('jf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const r=new FileReader();
  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.teams)throw 0;S=norm(d);save();render();toast('بازیابی انجام شد')}catch(x){toast('فایل پشتیبان معتبر نیست')}};r.readAsText(f)};
