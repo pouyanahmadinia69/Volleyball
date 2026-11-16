@@ -50,9 +50,8 @@ button.x{background:none;border:0;color:var(--bad);font-size:16px;padding:4px 8p
 .sp{display:inline-flex;flex-direction:column;align-items:center}.sp .x{padding:2px 8px;line-height:1;color:var(--pri)}.sp b{font-size:18px}
 .tm{display:flex;align-items:center;gap:4px}
 .fl{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0}.fl label{color:var(--mut);font-size:14px;min-width:60px}.fl select,.fl input{flex:1;min-width:0}.fl input.sn{width:60px;flex:none;text-align:center}
-th+th,td+td{border-inline-start:1px solid #c3d9e3}
-th+th{border-inline-start-color:rgba(255,255,255,.4)}
-th.g,td.g{border-inline-start:3px solid var(--pri)!important}
+th+th,td+td{border-inline-start:1px solid #d3e3ea}
+.dd:disabled{opacity:.22;text-decoration:line-through}
 td{padding:8px 8px}th{padding:10px 8px}
 body{padding-left:max(0px,env(safe-area-inset-left));padding-right:max(0px,env(safe-area-inset-right))}
 @media(min-width:1000px){table,table.w1,table.w2{min-width:0}main{padding:16px 20px}td,th{font-size:15px}}
@@ -135,7 +134,12 @@ const slotStart=l=>{const m=/(\d+):(\d+)-/.exec(l||'');return m?+m[1]*60+ +m[2]:
 const nextDay=s=>{const[y,m,d]=parse(s),g=j2g(y,m,d),n=new Date(g[0],g[1]-1,g[2]+1);return fmt(...g2j(n.getFullYear(),n.getMonth()+1,n.getDate()))};
 const mkey=g=>dkey(g.date)*100000+slotStart(g.slot)*10+Math.max(0,ORD.indexOf(g.order));
 const slotMin=l=>{const m=/(\d+):(\d+)-(\d+):(\d+)$/.exec(l||'');if(!m)return 0;const d=(+m[3]*60+ +m[4])-(+m[1]*60+ +m[2]);return d<0?d+1440:d};
-const sOpts=cur=>{const ls=S.slots.map(slotLabel);return'<option value="">—</option>'+[...ls,...(cur&&!ls.includes(cur)?[cur]:[])].map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('')};
+const tOnly=l=>(String(l||'').match(/\d{1,2}:\d{2}-\d{1,2}:\d{2}/)||[l||''])[0];
+const slotDays=()=>new Set(S.slots.filter(s=>s.day).map(s=>s.day));
+const firstAllowed=d=>{const D=slotDays();if(!D.size||!parse(d))return d;let x=d;for(let i=0;i<14;i++){if(D.has(dayName(x)))return x;x=nextDay(x)}return d};
+const slotsFor=date=>{const dn=dayName(date);return S.slots.filter(s=>!dn||!s.day||s.day===dn).map(slotLabel)};
+const sOpts=(cur,date)=>{const ls=slotsFor(date),dn=dayName(date);return'<option value="">—</option>'+[...ls,...(cur&&!ls.includes(cur)?[cur]:[])].map(l=>`<option value="${esc(l)}"${l===cur?' selected':''}>${esc(dn&&ls.includes(l)?tOnly(l):l)}</option>`).join('')};
+function fixSlot(o){const dn=dayName(o.date);if(!dn)return;const ok=slotsFor(o.date);if(!ok.includes(o.slot)){o.slot=ok[0]||'';if('min' in o&&o.slot)o.min=slotMin(o.slot)||o.min}}
 const fd=d=>d?`${dayName(d)} ${d}`:'';
 const bar=(k,o={})=>`<div class="r">${o.noImp?'':`<button class="b" data-imp="${k}">ورود از اکسل</button>`}<button class="b" data-exp="${k}">خروج اکسل</button>${o.noImp?'':`<button class="b o" data-tpl="${k}">دریافت قالب</button>`}</div>`;
 const acts=(k,id)=>`<button class="x" style="color:var(--pri)" data-ed="${k}:${id}" title="ویرایش" style="font-size:20px!important">✎</button><button class="x" data-del="${k}:${id}">✕</button>`;
@@ -150,9 +154,9 @@ function render(){
  $('st').innerHTML=bar('s',{noImp:1})+`<div class="wrap"><table>${head(['رتبه','تیم','بازی','برد','باخت','ست +','ست −','معدل ست','پوئن +','پوئن −','معدل پوئن','وضعیت'])}<tbody>${st.length?st.map((t,i)=>`<tr><td>${i+1}</td><td class="t">${esc(t.name)}</td><td>${t.p}</td><td>${t.w}</td><td>${t.l}</td><td>${t.sw}</td><td>${t.sl}</td><td>${t.sr.toFixed(3)}</td><td>${t.pw}</td><td>${t.pl}</td><td>${t.pr.toFixed(3)}</td><td>${t.done?'پایان':'در حال برگزاری'}</td></tr>`).join(''):'<tr><td colspan="12">اول تیم‌ها را اضافه کنید</td></tr>'}</tbody></table></div><p class="mut">ترتیب: برد بیشتر ← معدل ست ← معدل پوئن ← نتیجه رودررو</p>`;
  const mrows=S.matches.map((g,i)=>{const r=res(g);
   const set=j=>`<td dir="ltr"${j===0?' class="g"':''}>${g.s[j][0]!==''||g.s[j][1]!==''?esc(g.s[j][0])+' - '+esc(g.s[j][1]):''}</td>`;
-  return`<tr><td>${i+1}</td><td dir="ltr">${g.date}</td><td>${dayName(g.date)}</td><td>${g.order}</td><td dir="ltr">${esc(g.slot)}</td><td class="t g">${esc(nm(g.a))}</td><td class="t">${esc(nm(g.b))}</td>${set(0)}${set(1)}${set(2)}<td class="g">${r.sets.length?r.sa+' - '+r.sb:''}</td><td>${esc(nm(r.w))}</td><td class="${r.fin?'ok':''}">${!r.fin&&!r.sets.length&&S.pp.some(x=>x.id===g.id)?'تعویق شده':r.st}</td><td class="g">${acts('m',g.id)}</td></tr>`}).join('');
+  return`<tr><td>${i+1}</td><td dir="ltr">${g.date}</td><td>${dayName(g.date)}</td><td>${g.order}</td><td dir="ltr">${esc(tOnly(g.slot))}</td><td class="t g">${esc(nm(g.a))}</td><td class="t">${esc(nm(g.b))}</td>${set(0)}${set(1)}${set(2)}<td class="g">${r.sets.length?r.sa+' - '+r.sb:''}</td><td>${esc(nm(r.w))}</td><td class="${r.fin?'ok':''}">${!r.fin&&!r.sets.length&&S.pp.some(x=>x.id===g.id)?'تعویق شده':r.st}</td><td class="g">${acts('m',g.id)}</td></tr>`}).join('');
  $('mt').innerHTML=bar('m')+`<div class="wrap"><table class="w1">${head(['بازی','تاریخ','روز','ترتیب','سانس','تیم اول','تیم دوم','ست 1','ست 2','ست 3','ست برده','برنده','وضعیت',''],[5,7,10,13])}<tbody>${mrows||'<tr><td colspan="14">بازی‌ای ثبت نشده</td></tr>'}</tbody></table></div><div class="r"><button class="b" data-add="m">+ بازی جدید</button><button class="b o" data-gen="1">ساخت خودکار برنامه</button></div><p class="mut">برای ثبت نتیجه روی «ویرایش» بزنید. وضعیت وقتی «نهایی» می‌شود که یک تیم 2 ست برده باشد.</p>`;
- const prow=S.practices.map((p,i)=>`<tr><td>${i+1}</td><td dir="ltr">${p.date}</td><td>${dayName(p.date)}</td><td class="t">${esc(p.teams.map(nm).join(' / '))}</td><td>${p.teams.length}</td><td dir="ltr">${esc(p.slot)}</td><td>${esc(p.min)}</td><td>${esc(p.type)}</td><td>${acts('p',p.id)}</td></tr>`).join('');
+ const prow=S.practices.map((p,i)=>`<tr><td>${i+1}</td><td dir="ltr">${p.date}</td><td>${dayName(p.date)}</td><td class="t">${esc(p.teams.map(nm).join(' / '))}</td><td>${p.teams.length}</td><td dir="ltr">${esc(tOnly(p.slot))}</td><td>${esc(p.min)}</td><td>${esc(p.type)}</td><td>${acts('p',p.id)}</td></tr>`).join('');
  const sum=S.teams.map(t=>{const ps=S.practices.filter(p=>p.teams.includes(t.id)),n=ps.length;
   return`<tr><td class="t">${esc(t.name)}</td><td>${esc(t.level)}</td><td>${ps.map(p=>`<div>${fd(p.date)}</div>`).join('')}</td><td>${n}</td><td class="${n===S.need?'ok':'no'}">${n===S.need?'✓ تأیید':n<S.need?'ناقص ('+(S.need-n)+' کم)':'اضافه ('+(n-S.need)+' بیشتر)'}</td></tr>`}).join('');
  $('pr').innerHTML=bar('p')+`<h3>برنامه تمرینات</h3><div class="wrap"><table class="w2">${head(['جلسه','تاریخ','روز','تیم‌های حاضر','تعداد','ساعت','دقیقه','نوع جلسه',''])}<tbody>${prow||'<tr><td colspan="9">جلسه‌ای ثبت نشده</td></tr>'}</tbody></table></div><button class="b" data-add="p">+ جلسه جدید</button><h3>خلاصه هر تیم (هر تیم ${S.need} نوبت)</h3><div class="wrap"><table class="w2">${head(['تیم','سطح','تاریخ‌های تمرین','تعداد جلسات','کنترل'])}<tbody>${sum||'<tr><td colspan="5">تیمی نیست</td></tr>'}</tbody></table></div>`;
@@ -166,9 +170,9 @@ const closeM=()=>{$('modal').style.display='none';$('modal').innerHTML='';mh=nul
 function confirmDel(txt,fn){back=null;M(`<div class="cal"><b>${txt}</b><div class="r" style="margin-top:14px"><button class="b" style="background:var(--bad)" data-yes="1">بله، حذف شود</button><button class="b o" data-mclose="1">انصراف</button></div></div>`);
  mh=e=>{if(e.target.closest('[data-yes]')){fn();save();closeM()}}}
 function pick(cur,cb,after){back=after||null;const sel=parse(cur);let[y,m]=sel||today();
- const draw=()=>{const off=(wd(y,m,1)+1)%7,n=mlen(y,m),td=today();let c='<i></i>'.repeat(off);
-  for(let d=1;d<=n;d++)c+=`<button class="dd${sel&&sel[0]==y&&sel[1]==m&&sel[2]==d?' on':''}${td[0]==y&&td[1]==m&&td[2]==d?' td':''}" data-d="${d}">${d}</button>`;
-  M(`<div class="cal"><div class="ch"><button class="x" data-cn="-1">›</button><b>${MN[m-1]} ${y}</b><button class="x" data-cn="1">‹</button></div><div class="cg wk">${['ش','ی','د','س','چ','پ','ج'].map(x=>`<span>${x}</span>`).join('')}</div><div class="cg">${c}</div><div class="r"><button class="b" data-tod="1">امروز</button><button class="b o" data-clr="1">پاک کردن</button><button class="b o" data-mclose="1">بستن</button></div></div>`)};
+ const draw=()=>{const off=(wd(y,m,1)+1)%7,n=mlen(y,m),td=today(),D=slotDays();let c='<i></i>'.repeat(off);
+  for(let d=1;d<=n;d++)c+=`<button class="dd${sel&&sel[0]==y&&sel[1]==m&&sel[2]==d?' on':''}${td[0]==y&&td[1]==m&&td[2]==d?' td':''}" data-d="${d}"${!D.size||D.has(DN[wd(y,m,d)])?'':' disabled'}>${d}</button>`;
+  M(`<div class="cal"><div class="ch"><button class="x" data-cn="-1">›</button><b>${MN[m-1]} ${y}</b><button class="x" data-cn="1">‹</button></div><div class="cg wk">${['ش','ی','د','س','چ','پ','ج'].map(x=>`<span>${x}</span>`).join('')}</div><div class="cg">${c}</div><p class="mut" style="padding:2px 0">${D.size?'فقط روزهای سانس: '+WD.filter(x=>D.has(x)).join('، '):'برای محدود کردن روزها، در تنظیمات روز سانس‌ها را مشخص کنید'}</p><div class="r"><button class="b" data-tod="1"${!D.size||D.has(dayName(fmt(...td)))?'':' disabled'}>امروز</button><button class="b o" data-clr="1">پاک کردن</button><button class="b o" data-mclose="1">بستن</button></div></div>`)};
  mh=e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;
   if(d.cn){m+=+d.cn;if(m>12){m=1;y++}if(m<1){m=12;y--}draw()}
   else if(d.d){cb(fmt(y,m,+d.d));closeM()}
@@ -181,14 +185,14 @@ function openEdit(k,id){back=null;const fl=(l,h)=>`<div class="fl"><label>${l}</
  const dbtn=(k,id,d)=>`<button class="d" data-pd="${k}:${id}">${d?fd(d):'انتخاب تاریخ'}</button>`;
  if(k==='m'){const g=S.matches.find(x=>x.id===id);if(!g)return;
   const si=j=>fl('ست '+(j+1),`<span dir="ltr"><input class="sn" type="number" inputmode="numeric" value="${esc(g.s[j][0])}" data-f="m:${id}:s:${j}:0"> - <input class="sn" type="number" inputmode="numeric" value="${esc(g.s[j][1])}" data-f="m:${id}:s:${j}:1"></span>`);
-  h=`<b>ویرایش بازی ${S.matches.indexOf(g)+1}</b>`+fl('تاریخ',dbtn('m',id,g.date))+fl('ترتیب',`<select data-f="m:${id}:order">${optsOf(['','اول','دوم'],g.order)}</select>`)+fl('سانس',`<select data-f="m:${id}:slot">${sOpts(g.slot)}</select>`)+fl('تیم اول',`<select data-f="m:${id}:a">${tOpts(g.a)}</select>`)+fl('تیم دوم',`<select data-f="m:${id}:b">${tOpts(g.b)}</select>`)+si(0)+si(1)+si(2)+`<div class=\"r\" style=\"margin-top:8px\"><button class=\"b o\" data-pp=\"${id}\">تعویق به سانس بعدی</button><button class=\"b o\" data-ub=\"${id}\"${S.pp.some(x=>x.id===id)?'':' disabled'}>برگشت به جای خود</button></div><p class=\"mut\" style=\"padding:4px\">تعویق: این بازی به اولین بازی سانس بعدی می‌رود و بازی‌های بعدی یک جایگاه عقب می‌روند.</p>`}
+  h=`<b>ویرایش بازی ${S.matches.indexOf(g)+1}</b>`+fl('تاریخ',dbtn('m',id,g.date))+fl('ترتیب',`<select data-f="m:${id}:order">${optsOf(['','اول','دوم'],g.order)}</select>`)+fl('سانس',`<select data-f="m:${id}:slot">${sOpts(g.slot,g.date)}</select>`)+fl('تیم اول',`<select data-f="m:${id}:a">${tOpts(g.a)}</select>`)+fl('تیم دوم',`<select data-f="m:${id}:b">${tOpts(g.b)}</select>`)+si(0)+si(1)+si(2)+`<div class=\"r\" style=\"margin-top:8px\"><button class=\"b o\" data-pp=\"${id}\">تعویق به سانس بعدی</button><button class=\"b o\" data-ub=\"${id}\"${S.pp.some(x=>x.id===id)?'':' disabled'}>برگشت به جای خود</button></div><p class=\"mut\" style=\"padding:4px\">تعویق: این بازی به اولین بازی سانس بعدی می‌رود و بازی‌های بعدی یک جایگاه عقب می‌روند.</p>`}
  if(k==='p'){const p=S.practices.find(x=>x.id===id);if(!p)return;
-  h=`<b>ویرایش جلسه ${S.practices.indexOf(p)+1}</b>`+fl('تاریخ',dbtn('p',id,p.date))+fl('تیم‌ها',`<button class="d" data-pt="${id}">${p.teams.length?esc(p.teams.map(nm).join(' / ')):'انتخاب تیم‌ها'}</button>`)+fl('سانس',`<select data-f="p:${id}:slot">${sOpts(p.slot)}</select>`)+fl('دقیقه',`<input type="number" inputmode="numeric" value="${esc(p.min)}" data-f="p:${id}:min">`)+fl('نوع جلسه',`<input value="${esc(p.type)}" data-f="p:${id}:type" placeholder="مثلاً حرفه‌ای">`)}
+  h=`<b>ویرایش جلسه ${S.practices.indexOf(p)+1}</b>`+fl('تاریخ',dbtn('p',id,p.date))+fl('تیم‌ها',`<button class="d" data-pt="${id}">${p.teams.length?esc(p.teams.map(nm).join(' / ')):'انتخاب تیم‌ها'}</button>`)+fl('سانس',`<select data-f="p:${id}:slot">${sOpts(p.slot,p.date)}</select>`)+fl('دقیقه',`<input type="number" inputmode="numeric" value="${esc(p.min)}" data-f="p:${id}:min">`)+fl('نوع جلسه',`<input value="${esc(p.type)}" data-f="p:${id}:type" placeholder="مثلاً حرفه‌ای">`)}
  if(k==='t'){const t=S.teams.find(x=>x.id===id);if(!t)return;
   h=`<b>ویرایش تیم</b>`+fl('اسم',`<input value="${esc(t.name)}" data-f="t:${id}:name">`)+fl('سطح',`<select data-f="t:${id}:level">${optsOf(['','حرفه‌ای','آماتور'],t.level)}</select>`)}
  M(`<div class="cal">${h}<div class="r" style="margin-top:12px"><button class="b" data-mclose="1">تأیید</button></div></div>`);
  mh=e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;
-  if(d.pd){const[kk,ii]=d.pd.split(':'),o=(kk==='m'?S.matches:S.practices).find(x=>x.id===ii);pick(o.date,v=>{o.date=v;if(kk==='p')S.practices.sort(dcmp);save()},()=>openEdit(kk,ii))}
+  if(d.pd){const[kk,ii]=d.pd.split(':'),o=(kk==='m'?S.matches:S.practices).find(x=>x.id===ii);pick(o.date,v=>{o.date=v;fixSlot(o);if(kk==='p')S.practices.sort(dcmp);save()},()=>openEdit(kk,ii))}
   if(d.pt)pickTeams(d.pt,()=>openEdit('p',d.pt));
   if(d.pp){postpone(d.pp);render();openEdit('m',d.pp)}
   if(d.ub){undoPP(d.ub);render();openEdit('m',d.ub)}}}
@@ -220,7 +224,7 @@ function genSchedule(start,per,replace){
  S.matches.sort((a,b)=>mkey(a)-mkey(b));save();
  toast(made+' بازی در برنامه قرار گرفت'+(pairs.length?` (${pairs.length} بازی جا نشد)`:''));return true}
 function openGen(){back=null;
- let start=S.matches.length?nextDay(S.matches[S.matches.length-1].date||fmt(...today())):fmt(...today()),per=2,rep=false;
+ let start=S.matches.length?nextDay(S.matches[S.matches.length-1].date||fmt(...today())):firstAllowed(fmt(...today())),per=2,rep=false;
  const draw=()=>M(`<div class="cal"><b>ساخت خودکار برنامه بازی‌ها</b>
   <div class="fl"><label>شروع از</label><button class="d" data-gd="1">${fd(start)}</button></div>
   <div class="fl"><label>بازی در هر سانس</label><select id="gp">${[1,2,3,4].map(n=>`<option${n===per?' selected':''}>${n}</option>`).join('')}</select></div>
@@ -294,8 +298,8 @@ document.addEventListener('click',e=>{
  if(d.ed){const[k,id]=d.ed.split(':');openEdit(k,id)}
  if(d.gen)openGen();
  if(d.add==='t'){const v=$('nt').value.trim();if(v){S.teams.push({id:uid(),name:v,level:''});save();render()}}
- if(d.add==='m'){const l=S.matches[S.matches.length-1];S.matches.push({id:uid(),date:l?l.date:fmt(...today()),order:'',slot:l?l.slot:'',a:'',b:'',s:[['',''],['',''],['','']]});save();render();openEdit('m',S.matches[S.matches.length-1].id)}
- if(d.add==='p'){const l=S.practices[S.practices.length-1],sl=S.slots[0]?slotLabel(S.slots[0]):'';S.practices.push({id:uid(),date:l?l.date:fmt(...today()),teams:[],slot:l?l.slot:sl,min:slotMin(l?l.slot:sl)||90,type:''});save();render();openEdit('p',S.practices[S.practices.length-1].id)}
+ if(d.add==='m'){const l=S.matches[S.matches.length-1];S.matches.push({id:uid(),date:l?l.date:firstAllowed(fmt(...today())),order:'',slot:l?l.slot:'',a:'',b:'',s:[['',''],['',''],['','']]});fixSlot(S.matches[S.matches.length-1]);save();render();openEdit('m',S.matches[S.matches.length-1].id)}
+ if(d.add==='p'){const l=S.practices[S.practices.length-1],sl=S.slots[0]?slotLabel(S.slots[0]):'';S.practices.push({id:uid(),date:l?l.date:firstAllowed(fmt(...today())),teams:[],slot:l?l.slot:sl,min:slotMin(l?l.slot:sl)||90,type:''});fixSlot(S.practices[S.practices.length-1]);save();render();openEdit('p',S.practices[S.practices.length-1].id)}
  if(d.add==='s'){S.slots.push({id:uid(),sh:18,sm:0,eh:19,em:30});save();render()}
  if(d.st){const[id,f,dl]=d.st.split(':'),s=S.slots.find(x=>x.id===id),old=slotLabel(s),mx=f[1]==='h'?24:60,step=f[1]==='h'?1:5;
   s[f]=((s[f]+ +dl*step)%mx+mx)%mx;const nw=slotLabel(s);
