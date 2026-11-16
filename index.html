@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>جدول والیبال</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="color-scheme" content="light"><meta name="theme-color" content="#3a9bbd">
-<link rel="icon" href="icon-192.png">
+<meta name="color-scheme" content="light"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="والیبال"><meta name="theme-color" content="#3a9bbd">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <style>
@@ -17,7 +17,7 @@ header{display:flex;align-items:center;gap:10px;background:var(--pri);color:#fff
 nav{display:flex;background:var(--card);border-bottom:2px solid var(--line);position:sticky;top:0;z-index:5}
 nav button{flex:1;padding:12px 2px;border:0;background:none;color:var(--mut);font:inherit;font-size:13px;border-bottom:3px solid transparent;margin-bottom:-2px}
 nav button.on{color:var(--pri);border-color:var(--acc);font-weight:700}
-main{padding:12px;max-width:900px;margin:auto}
+main{padding:12px;max-width:1600px;width:100%;margin:auto}
 section{display:none}section.on{display:block}
 h3{margin:14px 0 8px;font-size:16px}
 .card{background:var(--card);border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid var(--line)}
@@ -50,6 +50,14 @@ button.x{background:none;border:0;color:var(--bad);font-size:16px;padding:4px 8p
 .sp{display:inline-flex;flex-direction:column;align-items:center}.sp .x{padding:2px 8px;line-height:1;color:var(--pri)}.sp b{font-size:18px}
 .tm{display:flex;align-items:center;gap:4px}
 .fl{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0}.fl label{color:var(--mut);font-size:14px;min-width:60px}.fl select,.fl input{flex:1;min-width:0}.fl input.sn{width:60px;flex:none;text-align:center}
+th+th,td+td{border-inline-start:1px solid #c3d9e3}
+th+th{border-inline-start-color:rgba(255,255,255,.4)}
+th.g,td.g{border-inline-start:3px solid var(--pri)!important}
+td{padding:8px 8px}th{padding:10px 8px}
+body{padding-left:max(0px,env(safe-area-inset-left));padding-right:max(0px,env(safe-area-inset-right))}
+@media(min-width:1000px){table,table.w1,table.w2{min-width:0}main{padding:16px 20px}td,th{font-size:15px}}
+@media(max-width:999px) and (min-width:600px){td,th{font-size:13px;padding:6px 5px}}
+@media(orientation:landscape) and (max-height:520px){header{padding:6px 14px;font-size:16px}header img{width:26px;height:26px}nav button{padding:7px 2px}main{padding:8px}.cal{max-height:92vh}}
 button:disabled{opacity:.4}
 #toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#1d3b47;color:#fff;padding:10px 16px;border-radius:10px;display:none;z-index:30;font-size:14px;max-width:90%}
 </style>
@@ -133,7 +141,7 @@ const bar=(k,o={})=>`<div class="r">${o.noImp?'':`<button class="b" data-imp="${
 const acts=(k,id)=>`<button class="x" style="color:var(--pri)" data-ed="${k}:${id}" title="ویرایش" style="font-size:20px!important">✎</button><button class="x" data-del="${k}:${id}">✕</button>`;
 const tOpts=sel=>'<option value="">—</option>'+S.teams.map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${esc(t.name)}</option>`).join('');
 const optsOf=(arr,cur)=>arr.map(o=>`<option${o===cur?' selected':''}>${o}</option>`).join('');
-const head=h=>`<thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead>`;
+const head=(h,g=[])=>`<thead><tr>${h.map((x,i)=>`<th${g.includes(i)?' class="g"':''}>${x}</th>`).join('')}</tr></thead>`;
 const stp=(id,f,v)=>`<span class="sp"><button class="x" data-st="${id}:${f}:1">▲</button><b>${p2(v)}</b><button class="x" data-st="${id}:${f}:-1">▼</button></span>`;
 function render(){
  sortSlots();
@@ -141,9 +149,9 @@ function render(){
  const st=stats();
  $('st').innerHTML=bar('s',{noImp:1})+`<div class="wrap"><table>${head(['رتبه','تیم','بازی','برد','باخت','ست +','ست −','معدل ست','پوئن +','پوئن −','معدل پوئن','وضعیت'])}<tbody>${st.length?st.map((t,i)=>`<tr><td>${i+1}</td><td class="t">${esc(t.name)}</td><td>${t.p}</td><td>${t.w}</td><td>${t.l}</td><td>${t.sw}</td><td>${t.sl}</td><td>${t.sr.toFixed(3)}</td><td>${t.pw}</td><td>${t.pl}</td><td>${t.pr.toFixed(3)}</td><td>${t.done?'پایان':'در حال برگزاری'}</td></tr>`).join(''):'<tr><td colspan="12">اول تیم‌ها را اضافه کنید</td></tr>'}</tbody></table></div><p class="mut">ترتیب: برد بیشتر ← معدل ست ← معدل پوئن ← نتیجه رودررو</p>`;
  const mrows=S.matches.map((g,i)=>{const r=res(g);
-  const set=j=>`<td dir="ltr">${g.s[j][0]!==''||g.s[j][1]!==''?esc(g.s[j][0])+' - '+esc(g.s[j][1]):''}</td>`;
-  return`<tr><td>${i+1}</td><td dir="ltr">${g.date}</td><td>${dayName(g.date)}</td><td>${g.order}</td><td dir="ltr">${esc(g.slot)}</td><td class="t">${esc(nm(g.a))}</td><td class="t">${esc(nm(g.b))}</td>${set(0)}${set(1)}${set(2)}<td>${r.sets.length?r.sa+' - '+r.sb:''}</td><td>${esc(nm(r.w))}</td><td class="${r.fin?'ok':''}">${!r.fin&&!r.sets.length&&S.pp.some(x=>x.id===g.id)?'تعویق شده':r.st}</td><td>${acts('m',g.id)}</td></tr>`}).join('');
- $('mt').innerHTML=bar('m')+`<div class="wrap"><table class="w1">${head(['بازی','تاریخ','روز','ترتیب','سانس','تیم اول','تیم دوم','ست 1','ست 2','ست 3','ست برده','برنده','وضعیت',''])}<tbody>${mrows||'<tr><td colspan="14">بازی‌ای ثبت نشده</td></tr>'}</tbody></table></div><div class="r"><button class="b" data-add="m">+ بازی جدید</button><button class="b o" data-gen="1">ساخت خودکار برنامه</button></div><p class="mut">برای ثبت نتیجه روی «ویرایش» بزنید. وضعیت وقتی «نهایی» می‌شود که یک تیم 2 ست برده باشد.</p>`;
+  const set=j=>`<td dir="ltr"${j===0?' class="g"':''}>${g.s[j][0]!==''||g.s[j][1]!==''?esc(g.s[j][0])+' - '+esc(g.s[j][1]):''}</td>`;
+  return`<tr><td>${i+1}</td><td dir="ltr">${g.date}</td><td>${dayName(g.date)}</td><td>${g.order}</td><td dir="ltr">${esc(g.slot)}</td><td class="t g">${esc(nm(g.a))}</td><td class="t">${esc(nm(g.b))}</td>${set(0)}${set(1)}${set(2)}<td class="g">${r.sets.length?r.sa+' - '+r.sb:''}</td><td>${esc(nm(r.w))}</td><td class="${r.fin?'ok':''}">${!r.fin&&!r.sets.length&&S.pp.some(x=>x.id===g.id)?'تعویق شده':r.st}</td><td class="g">${acts('m',g.id)}</td></tr>`}).join('');
+ $('mt').innerHTML=bar('m')+`<div class="wrap"><table class="w1">${head(['بازی','تاریخ','روز','ترتیب','سانس','تیم اول','تیم دوم','ست 1','ست 2','ست 3','ست برده','برنده','وضعیت',''],[5,7,10,13])}<tbody>${mrows||'<tr><td colspan="14">بازی‌ای ثبت نشده</td></tr>'}</tbody></table></div><div class="r"><button class="b" data-add="m">+ بازی جدید</button><button class="b o" data-gen="1">ساخت خودکار برنامه</button></div><p class="mut">برای ثبت نتیجه روی «ویرایش» بزنید. وضعیت وقتی «نهایی» می‌شود که یک تیم 2 ست برده باشد.</p>`;
  const prow=S.practices.map((p,i)=>`<tr><td>${i+1}</td><td dir="ltr">${p.date}</td><td>${dayName(p.date)}</td><td class="t">${esc(p.teams.map(nm).join(' / '))}</td><td>${p.teams.length}</td><td dir="ltr">${esc(p.slot)}</td><td>${esc(p.min)}</td><td>${esc(p.type)}</td><td>${acts('p',p.id)}</td></tr>`).join('');
  const sum=S.teams.map(t=>{const ps=S.practices.filter(p=>p.teams.includes(t.id)),n=ps.length;
   return`<tr><td class="t">${esc(t.name)}</td><td>${esc(t.level)}</td><td>${ps.map(p=>`<div>${fd(p.date)}</div>`).join('')}</td><td>${n}</td><td class="${n===S.need?'ok':'no'}">${n===S.need?'✓ تأیید':n<S.need?'ناقص ('+(S.need-n)+' کم)':'اضافه ('+(n-S.need)+' بیشتر)'}</td></tr>`}).join('');
